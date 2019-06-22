@@ -9,6 +9,8 @@ import urllib3
 import datetime
 import json
 
+import class_ganhos
+
 from urllib.parse import urlencode
 
 class Investimento:
