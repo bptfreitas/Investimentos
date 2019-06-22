@@ -56,7 +56,7 @@ args = parser.parse_args()
 
 capital = args.capital[0]
 taxa = args.taxa[0]
-tipo = args.tipo
+tipo = args.tipo[0]
 
 print(args)
 
@@ -97,6 +97,7 @@ sys.stdout.write("Data final do investimento: " + str(end) + '\n')
 
 capital, dias_corridos, ganho_diario = Investimento.getWinnings(start,end)
 
+sys.stdout.write("---------------------------------\n")
 sys.stdout.write("Capital final: " + str(capital) + '\n')
 sys.stdout.write("Dias corridos: " + str(dias_corridos) + '\n')
 sys.stdout.write("Evolucao diaria: " + str(ganho_diario) + '\n')
