@@ -16,19 +16,23 @@ from urllib.parse import urlencode
 
 class Investiment:
 
-	def __init__(self,capital=0):
+	def __init__(self, capital=0):
 		self._capital = capital
+		self._limite_ganhos_diarios = 5
 		self._Juros = SemJuros()
 
-	def setFixed(self,yearlyRate):		
+	def getDailyWinningsLimit(self):
+		return self._limite_ganhos_diarios
+
+	def setFixed(self, yearlyRate):		
 		self._Juros = JurosFixos()
 		self._Juros.setYearlyFixedRate(yearlyRate)
 
-	def setLCA(self,contractRate):
+	def setLCA(self, contractRate):
 		self._Juros = JurosLCA()
 		self._Juros.setContractRate(contractRate)
 
-	def setStartingCapital(self,capital):
+	def setStartingCapital(self, capital):
 		self._capital = capital
 
 	def getStartingCapital(self):
@@ -42,25 +46,30 @@ class Investiment:
 		interestRates = self._Juros.getInterestRates(inicio,fim)
 
 		ganhos = []
+
+		limite_ganhos_diarios = self.getDailyWinningsLimit()
 		
 		for dia in sorted(interestRates.keys()):
 
 			juros = interestRates[dia]
 
 			capital*=juros
+
 			ganhos.append(capital)
+			if len(ganhos)>limite_ganhos_diarios+1:
+				ganhos = ganhos[0:limite_ganhos_diarios+1]
 			
 		ganho_diario = [ ganhos[i]-ganhos[i-1]  for i in range(1,len(ganhos)) ]
 		dias_corridos = len(ganhos)
 
-		return capital,dias_corridos,ganho_diario
+		return round(capital,2), len(interestRates), ganho_diario
 
 
 class TestFixedInvestments(unittest.TestCase):
 
 	def setUp(self):
 		self.Investment = Investiment(10000)
-		self.Investment.setFixed(10)
+		self.Investment.setFixed(10.0)
 
 	def test_010_JurosSemestrais(self):
 		
@@ -80,7 +89,7 @@ class TestLCAInvestment(unittest.TestCase):
 		
 		capital, dias, ganhos = self.Investment.getWinnings('18/02/2019','22/06/2019')
 
-		print(capital)
+		print(capital,dias,ganhos)
 		sys.stdout.flush()
 
 		#self.assertEqual(selic, 'FOO')

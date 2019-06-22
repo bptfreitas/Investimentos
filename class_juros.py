@@ -156,7 +156,7 @@ class JurosFixos(Juros):
 		SELIC = self.fetchSELICRates(inicio,fim)
 
 		FixedRate = self.getFixedRate()
-		rates = { key : (1+FixedRate) for key,value in SELIC.items() }
+		rates = { key : (1+FixedRate/100) for key,value in SELIC.items() }
 		return rates
 	
 #start.strftime("%d/%m/%Y") :
