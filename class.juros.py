@@ -77,7 +77,7 @@ class Juros:
 
 			data={}
 			for d in data_json:
-				data[datetime.datetime.strptime(d['data'],"%d/%m/%Y")]=d['valor']
+				data[datetime.datetime.strptime(d['data'],"%d/%m/%Y")]=float(d['valor'])
 
 			self._SELIC_Rates = data
 
@@ -87,19 +87,16 @@ class Juros:
 			sys.stderr.write("Erro obtendo SELIC diaria\n")
 			sys.exit(-1)
 
-	def getInterestByDay(self,dia):
+	def getInterestRates(self,inicio,fim):
 		pass
 
 class JurosLCA(Juros):
 
-	def __init__(self,inicio,fim):
+	def getInterestRates(self,inicio,fim):
 		self._SELIC_Rates = self.getSELICRates(inicio,fim)
-
-	def getInterestByDay(self,dia):
-		if dia in self._SELIC_Rates:
-			return (1+self._SELIC_Rates[dia]*self.getCDIRate())
-		else
-			return 1
+		CDI = self.getCDIRate()
+		rates = { key : (1+value)*CDI for key,value in self._SELIC_Rates.items() }
+		return rates
 
 
 class Old:
@@ -156,30 +153,43 @@ class Old:
 		dias_corridos = len(ganhos)
 
 		return capital,dias_corridos,ganho_diario
-		
-Investimento = InvestimentoSELIC()
 	
 #start.strftime("%d/%m/%Y") :
 #url2 = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?formato=json&dataInicial="+start+"&dataFinal="+today
 #url3 = "http://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?formato=json&amp;dataInicial="+start+"&amp;dataFinal="+today
 
-class TestStringMethods(unittest.TestCase):
+class TestJurosClass(unittest.TestCase):
 
-    def test_upper(self):
-        self.assertEqual('foo'.upper(), 'FOO')
+	def setUp(self):
+		self.Juros = Juros()
 
-    def test_isupper(self):
-        self.assertTrue('FOO'.isupper())
-        self.assertFalse('Foo'.isupper())
+	def test_SELIC(self):
+		selic1 = self.Juros.getSELICRates('01/02/2019','07/02/2019')
 
-    def test_split(self):
-        s = 'hello world'
-        self.assertEqual(s.split(), ['hello', 'world'])
-        # check that s.split fails when the separator is not a string
-        with self.assertRaises(TypeError):
-            s.split(2)
+		print(selic1)
+
+class TestJurosLCAClass(unittest.TestCase):
+
+	def setUp(self):
+		self.JurosLCA = JurosLCA()		
+
+	def test_LCA(self):
+		LCA = self.JurosLCA.getInterestRates('01/02/2019','07/02/2019')
+
+		print(LCA)
+
+		#self.assertEqual(selic, 'FOO')
+
+	#def test_isupper(self):
+	#   self.assertTrue('FOO'.isupper())
+	#  self.assertFalse('Foo'.isupper())
+
+	#def test_split(self):
+	#   s = 'hello world'
+	#  self.assertEqual(s.split(), ['hello', 'world'])
+	# check that s.split fails when the separator is not a string
+	# with self.assertRaises(TypeError):
+	#    s.split(2)
 
 if __name__ == '__main__':
     unittest.main()
-
-
