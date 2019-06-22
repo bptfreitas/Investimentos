@@ -18,18 +18,12 @@ class Juros:
 		self._SELIC_Rates = {}
 		self._SELIC_Rates_Period = {}
 		self._CDI_Rate = 6.4/6.5
-		self._FixedRate = 1;
+		self._FixedRate = 1
 
 	def getCDIRate(self):
 		# magic constant to compute the real CDI from the SELIC
 		# TODO: discover how to fetch/compute the real CDI from the Internetn
 		return self._CDI_Rate
-
-	def getFixedRate(self):
-		return self._FixedRate
-
-	def setYearlyFixedRate(self,rate):
-		self._FixedRate = rate/252
 
 	def getSELICRatesPeriod(self):
 		return self._SELIC_Rates_Period
@@ -100,6 +94,8 @@ class Juros:
 			# SELIC fetch period is only updated after a successful request
 			self._SELIC_Rates_Period = currentRatesPeriod
 
+			http_query.clear()
+
 			return self._SELIC_Rates
 
 		else:
@@ -110,18 +106,50 @@ class Juros:
 	def getInterestRates(self,inicio,fim):
 		pass
 
+# no interest rate
+class SemJuros(Juros):
+
+	def getInterestRates(self,inicio,fim):
+		# getting SELIC just to grab valid dates 		
+		SELIC = self.fetchSELICRates(inicio,fim)
+
+		rates = { key : 1 for key,value in SELIC.items() }
+		return rates
+
 # computes the interest rate considering the LCA rate, defined by the SELIC and the CDI Rate
 class JurosLCA(Juros):
 
+	def __init__(self):
+		Juros.__init__(self)
+		self._contractRate = 1
+
+	def setContractRate(self,contractRate):
+		self._contractRate = contractRate
+
+	def getContractRate(self):
+		return self._contractRate
+
 	def getInterestRates(self,inicio,fim):
-		SELIC = self.fetchSELICRates(inicio,fim)
+		SELIC = self.fetchSELICRates(inicio,fim)		
 		CDI = self.getCDIRate()
-		rates = { key : (1+value)*CDI for key,value in self._SELIC_Rates.items() }
+		contractRate = self.getContractRate()
+
+		rates = { dia : (1+(SELIC_diaria/100)*CDI*contractRate) for dia,SELIC_diaria in SELIC.items() }
 		return rates
 
 
 # gets the interest rate considering fixed yearly rate
 class JurosFixos(Juros):
+
+	def __init__(self):
+		Juros.__init__(self)
+		self._FixedRate = 1
+
+	def getFixedRate(self):
+		return self._FixedRate
+
+	def setYearlyFixedRate(self,rate):
+		self._FixedRate = rate/252	
 
 	def getInterestRates(self,inicio,fim):
 		# getting SELIC just to grab valid dates 		
@@ -129,62 +157,7 @@ class JurosFixos(Juros):
 
 		FixedRate = self.getFixedRate()
 		rates = { key : (1+FixedRate) for key,value in SELIC.items() }
-
-
-class Old:
-
-	def __init__(self):
-
-		if tipo == 'LCA':
-			self._juros_dias = JurosLCA()
-
-	def setPeriod(self,inicio, fim = datetime.datetime.now().strftime("%d/%m/%Y")):
-
-		try:
-			start_date = datetime.datetime.strptime(inicio,"%d/%m/%Y")		
-		except ValueError:
-			sys.stderr.write("Erro: formato de data inicial invalido. Digite no formato dd/mm/aaaa.\n")
-			sys.exit(-1)
-
-		try:
-			if debug:
-				print("fim:"+fim+"\n")
-			end_date = datetime.datetime.strptime(fim,"%d/%m/%Y")			
-		except ValueError:
-			sys.stderr.write("Erro: formato de data final invalido. Digite no formato dd/mm/aaaa.\n")
-			sys.exit(-1)		
-
-	def setStartingCapital(self,capital):
-		self.__starting_capital = capital
-
-	def getStartingCapital(self):
-		return self.__starting_capital
-
-	def getWinnings(self, inicio, fim = datetime.datetime.now().strftime("%d/%m/%Y")):
-
-		capital = self.getStartingCapital()
-		# taxa = self.getRate()
-
-		# taxasSELIC = self.fetchSELICRates(inicio,fim)
-
-		ganhos = []
-		
-		for dia in sorted(taxasSELIC.keys()):
-
-			#SELIC = (float(taxasSELIC[dia])/100)
-
-			#cdi = SELIC*self.getCDIRate()
-			#juros = 1.0 + cdi*taxa
-
-			juros = self.getInterestByDay(dia)
-
-			capital*=juros
-			ganhos.append(capital)
-			
-		ganho_diario = [ ganhos[i]-ganhos[i-1]  for i in range(1,len(ganhos)) ]
-		dias_corridos = len(ganhos)
-
-		return capital,dias_corridos,ganho_diario
+		return rates
 	
 #start.strftime("%d/%m/%Y") :
 #url2 = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?formato=json&dataInicial="+start+"&dataFinal="+today
@@ -206,7 +179,7 @@ class TestJurosLCAClass(unittest.TestCase):
 		self.JurosLCA = JurosLCA()		
 
 	def test_LCA(self):
-		LCA = self.JurosLCA.getInterestRates('01/02/2019','07/02/2019')
+		LCA = self.JurosLCA.getInterestRates('20/02/2019','01/07/2019')
 
 		print(LCA)
 
