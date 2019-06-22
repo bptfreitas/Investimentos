@@ -117,7 +117,7 @@ class SemJuros(Juros):
 		return rates
 
 # computes the interest rate considering the LCA rate, defined by the SELIC and the CDI Rate
-class JurosLCA(Juros):
+class JurosCDI(Juros):
 
 	def __init__(self):
 		Juros.__init__(self)
@@ -173,13 +173,13 @@ class TestJurosClass(unittest.TestCase):
 
 		print(selic1)
 
-class TestJurosLCAClass(unittest.TestCase):
+class TestJurosCDIClass(unittest.TestCase):
 
 	def setUp(self):
-		self.JurosLCA = JurosLCA()		
+		self.JurosCDI = JurosCDI()		
 
 	def test_LCA(self):
-		LCA = self.JurosLCA.getInterestRates('20/02/2019','01/07/2019')
+		LCA = self.JurosCDI.getInterestRates('20/02/2019','01/07/2019')
 
 		print(LCA)
 

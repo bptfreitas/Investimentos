@@ -10,7 +10,7 @@ import datetime
 import json
 import unittest
 
-from class_juros import Juros, JurosLCA, JurosFixos, SemJuros
+from class_juros import Juros, JurosCDI, JurosFixos, SemJuros
 
 from urllib.parse import urlencode
 
@@ -28,8 +28,8 @@ class Investiment:
 		self._Juros = JurosFixos()
 		self._Juros.setYearlyFixedRate(yearlyRate)
 
-	def setLCA(self, contractRate):
-		self._Juros = JurosLCA()
+	def setCDI(self, contractRate):
+		self._Juros = JurosCDI()
 		self._Juros.setContractRate(contractRate)
 
 	def setStartingCapital(self, capital):
@@ -75,7 +75,7 @@ class TestFixedInvestments(unittest.TestCase):
 		
 		capital, dias, ganhos = self.Investment.getWinnings('01/01/2019','01/07/2019')
 
-		print(capital)
+		print(capital,dias,ganhos)
 		sys.stdout.flush()
 
 
@@ -83,7 +83,7 @@ class TestLCAInvestment(unittest.TestCase):
 
 	def setUp(self):
 		self.Investment = Investiment(10000)
-		self.Investment.setLCA(0.85)
+		self.Investment.setCDI(0.85)
 
 	def test_010_JurosSemestrais(self):
 		
@@ -92,7 +92,7 @@ class TestLCAInvestment(unittest.TestCase):
 		print(capital,dias,ganhos)
 		sys.stdout.flush()
 
-		#self.assertEqual(selic, 'FOO')
+		# self.assertEqual(selic, 'FOO')
 
 	#def test_isupper(self):
 	#   self.assertTrue('FOO'.isupper())
