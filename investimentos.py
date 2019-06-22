@@ -58,7 +58,7 @@ capital = args.capital[0]
 taxa = args.taxa[0]
 tipo = args.tipo[0]
 
-print(args)
+#print(args)
 
 debug = False
 
