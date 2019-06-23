@@ -130,7 +130,14 @@ class Juros:
 
 		if response.status == 200:
 	
-			print( response.data.decode('utf-8') )
+			data_json = json.loads(response.data.decode('utf-8'))
+
+			data = {}
+			for d in data_json[1:]:
+				data[datetime.datetime.strptime(d['D2C'],"%Y%m")]=float(d['V'])
+
+			print(data)
+			# print( response.data.decode('utf-8') )
 
 			http_query.clear()
 
@@ -209,7 +216,7 @@ class TestJurosClass(unittest.TestCase):
 		# print(SELIC)
 
 	def test_010_fetchIPCA(self):
-		IPCA = self.Juros.fetchIPCARates('01/02/2019','07/02/2019')
+		IPCA = self.Juros.fetchIPCARates('01/02/2019','01/07/2019')
 
 		print(IPCA)
 
