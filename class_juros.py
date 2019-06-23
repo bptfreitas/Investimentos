@@ -27,9 +27,8 @@ class Juros:
 
 	def getSELICRatesPeriod(self):
 		return self._SELIC_Rates_Period
-	
-	# fetches the SELIC rates from the BCB (www.bcb.gov.br) given a fixed period
-	def fetchSELICRates(self, inicio, fim , debug=False):
+
+	def checkPeriod(self, inicio, fim, debug = False):
 
 		try:
 			start_date = datetime.datetime.strptime(inicio,"%d/%m/%Y")
@@ -44,6 +43,13 @@ class Juros:
 		except ValueError:
 			sys.stderr.write("Erro: formato de data final invalido. Digite no formato dd/mm/aaaa.\n")
 			sys.exit(-1)
+
+		return start_date, end_date
+
+	# fetches the SELIC rates from the BCB (www.bcb.gov.br) given a fixed period
+	def fetchSELICRates(self, inicio, fim , debug=False):
+
+		start_date, end_date = self.checkPeriod(inicio,fim)
 
 		currentRatesPeriod = self.getSELICRatesPeriod()
 
@@ -78,7 +84,7 @@ class Juros:
 		header['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 
 		http_query = urllib3.PoolManager()
-		response = http_query.request('GET', url, headers = header)		
+		response = http_query.request('GET', url, headers = header)
 
 		if response.status == 200:
 
@@ -100,6 +106,36 @@ class Juros:
 
 		else:
 			sys.stderr.write("Erro obtendo SELIC diaria\n")
+			sys.exit(-1)
+
+	def fetchIPCARates(self,inicio,fim):
+		# "http://api.sidra.ibge.gov.br/values/t/1419/n1/all/p/"&ANO(A2)&TEXTO(A2;"mm")&"/v/63"
+		start_date, end_date = self.checkPeriod(inicio, fim)	
+
+		start = start_date.strftime("%Y%m")	
+		end = end_date.strftime("%Y%m")
+
+		# url = "http://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?" + datain
+
+		# datain = urlencode( { 'dataInicial'  : start , 'dataFinal'  : end, 'formato' : 'json' } )
+
+		url = "http://api.sidra.ibge.gov.br/values/t/1419/n1/all/p/"+start+'-'+end+"/v/63"
+
+		header = {}
+		header['user-agent'] = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0' 
+		header['Accept'] = 'application/xhtml+xml;q=0.9,*/*;q=0.8'
+
+		http_query = urllib3.PoolManager()
+		response = http_query.request('GET', url, headers = header)
+
+		if response.status == 200:
+	
+			print( response.data.decode('utf-8') )
+
+			http_query.clear()
+
+		else:
+			sys.stderr.write("Erro obtendo IPCA diaria\n")
 			sys.exit(-1)
 
 	# strategy method to implement various interest rates
@@ -137,7 +173,6 @@ class JurosCDI(Juros):
 		rates = { dia : (1+(SELIC_diaria/100)*CDI*contractRate) for dia,SELIC_diaria in SELIC.items() }
 		return rates
 
-
 # gets the interest rate considering fixed yearly rate
 class JurosFixos(Juros):
 
@@ -169,9 +204,14 @@ class TestJurosClass(unittest.TestCase):
 		self.Juros = Juros()
 
 	def test_010_fetchSELIC(self):
-		selic1 = self.Juros.fetchSELICRates('01/02/2019','07/02/2019')
+		SELIC = self.Juros.fetchSELICRates('01/02/2019','07/02/2019')
 
-		print(selic1)
+		# print(SELIC)
+
+	def test_010_fetchIPCA(self):
+		IPCA = self.Juros.fetchIPCARates('01/02/2019','07/02/2019')
+
+		print(IPCA)
 
 class TestJurosCDIClass(unittest.TestCase):
 
@@ -181,7 +221,7 @@ class TestJurosCDIClass(unittest.TestCase):
 	def test_LCA(self):
 		LCA = self.JurosCDI.getInterestRates('20/02/2019','01/07/2019')
 
-		print(LCA)
+		# print(LCA)
 
 class TestJurosFixosClass(unittest.TestCase):
 
@@ -198,10 +238,7 @@ class TestJurosFixosClass(unittest.TestCase):
 	def test_020_JurosFixos(self):
 		JurosFixos = self.JurosFixos.getInterestRates('01/02/2019','07/02/2019')
 
-		print(JurosFixos)		
-
-
-
+		# print(JurosFixos)		
 		#self.assertEqual(selic, 'FOO')
 
 	#def test_isupper(self):
