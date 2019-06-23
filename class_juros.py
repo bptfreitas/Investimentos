@@ -10,6 +10,7 @@ import datetime
 import json
 import unittest
 
+from datetime import datetime
 from urllib.parse import urlencode
 
 # class that fetches various interest rates parameters
@@ -22,7 +23,7 @@ class Juros:
 
 	def getCDIRate(self):
 		# magic constant to compute the real CDI from the SELIC
-		# TODO: discover how to fetch/compute the real CDI from the Internetn
+		# TODO: discover how to fetch/compute the real CDI from
 		return self._CDI_Rate
 
 	def getSELICRatesPeriod(self):
@@ -31,7 +32,7 @@ class Juros:
 	def checkPeriod(self, inicio, fim, debug = False):
 
 		try:
-			start_date = datetime.datetime.strptime(inicio,"%d/%m/%Y")
+			start_date = datetime.strptime(inicio,"%d/%m/%Y")
 		except ValueError:
 			sys.stderr.write("Erro: formato de data inicial invalido. Digite no formato dd/mm/aaaa.\n")
 			sys.exit(-1)
@@ -39,7 +40,7 @@ class Juros:
 		try:
 			if debug:
 				print("fim:"+fim+"\n")
-			end_date = datetime.datetime.strptime(fim,"%d/%m/%Y")
+			end_date = datetime.strptime(fim,"%d/%m/%Y")
 		except ValueError:
 			sys.stderr.write("Erro: formato de data final invalido. Digite no formato dd/mm/aaaa.\n")
 			sys.exit(-1)
@@ -92,7 +93,7 @@ class Juros:
 
 			data = {}
 			for d in data_json:
-				data[datetime.datetime.strptime(d['data'],"%d/%m/%Y")]=float(d['valor'])
+				data[datetime.strptime(d['data'],"%d/%m/%Y")]=float(d['valor'])
 			
 			# sets the new SELIC period dictionary
 			self._SELIC_Rates = data
@@ -108,16 +109,14 @@ class Juros:
 			sys.stderr.write("Erro obtendo SELIC diaria\n")
 			sys.exit(-1)
 
-	def fetchMonthlyIPCARates(self,inicio,fim):
+
+	# TODO: dicover how to get working days aside from SELIC
+	def fetchMonthlyIPCARates(self, inicio, fim):
 		# "http://api.sidra.ibge.gov.br/values/t/1419/n1/all/p/"&ANO(A2)&TEXTO(A2;"mm")&"/v/63"
 		start_date, end_date = self.checkPeriod(inicio, fim)	
 
 		start = start_date.strftime("%Y%m")	
 		end = end_date.strftime("%Y%m")
-
-		# url = "http://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?" + datain
-
-		# datain = urlencode( { 'dataInicial'  : start , 'dataFinal'  : end, 'formato' : 'json' } )
 
 		url = "http://api.sidra.ibge.gov.br/values/t/1419/n1/all/p/"+start+'-'+end+"/v/63"
 
@@ -129,17 +128,17 @@ class Juros:
 		response = http_query.request('GET', url, headers = header)
 
 		if response.status == 200:
-	
+				
 			data_json = json.loads(response.data.decode('utf-8'))
 
 			data = {}
 			for d in data_json[1:]:
-				data[datetime.datetime.strptime(d['D2C'],"%Y%m")]=float(d['V'])
+				data[datetime.strptime(d['D2C'],"%Y%m")]=float(d['V'])
 
-			# print(data)
-			# print( response.data.decode('utf-8') )
-
+			# freeing the pool of connections before returning
 			http_query.clear()
+
+			return data			
 
 		else:
 			sys.stderr.write("Erro obtendo IPCA mensal\n")
@@ -200,6 +199,28 @@ class JurosFixos(Juros):
 		FixedRate = self.getFixedRate()
 		rates = { key : (1+FixedRate/100) for key,value in SELIC.items() }
 		return rates
+
+# gets the interest rate considering Monthly IPCA Rate
+class JurosIPCA(Juros):
+
+	def __init__(self):
+		Juros.__init__(self)
+		self._FixedRate = 1
+
+	def getFixedRate(self):
+		return self._FixedRate
+
+	def setFixedRate(self,rate):
+		self._FixedRate = rate/252	
+
+	def getInterestRates(self,inicio,fim):
+		# getting SELIC just to grab valid dates 		
+		SELIC = self.fetchSELICRates(inicio,fim)
+		IPCA = self.fetchMonthlyIPCARates(inicio,fim)
+
+		FixedRate = self.getFixedRate()
+		rates = { dia : (1+FixedRate/100) for dia in SELIC.keys() if datetime.strptime(dia.strftime("%Y%m") in IPCA.keys() ) }
+		return rates		
 	
 #start.strftime("%d/%m/%Y") :
 #url2 = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados?formato=json&dataInicial="+start+"&dataFinal="+today
