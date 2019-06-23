@@ -108,7 +108,7 @@ class Juros:
 			sys.stderr.write("Erro obtendo SELIC diaria\n")
 			sys.exit(-1)
 
-	def fetchIPCARates(self,inicio,fim):
+	def fetchMonthlyIPCARates(self,inicio,fim):
 		# "http://api.sidra.ibge.gov.br/values/t/1419/n1/all/p/"&ANO(A2)&TEXTO(A2;"mm")&"/v/63"
 		start_date, end_date = self.checkPeriod(inicio, fim)	
 
@@ -136,13 +136,13 @@ class Juros:
 			for d in data_json[1:]:
 				data[datetime.datetime.strptime(d['D2C'],"%Y%m")]=float(d['V'])
 
-			print(data)
+			# print(data)
 			# print( response.data.decode('utf-8') )
 
 			http_query.clear()
 
 		else:
-			sys.stderr.write("Erro obtendo IPCA diaria\n")
+			sys.stderr.write("Erro obtendo IPCA mensal\n")
 			sys.exit(-1)
 
 	# strategy method to implement various interest rates
@@ -216,7 +216,7 @@ class TestJurosClass(unittest.TestCase):
 		# print(SELIC)
 
 	def test_010_fetchIPCA(self):
-		IPCA = self.Juros.fetchIPCARates('01/02/2019','01/07/2019')
+		IPCA = self.Juros.fetchMonthlyIPCARates('01/02/2019','01/07/2019')
 
 		print(IPCA)
 
