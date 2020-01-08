@@ -20,6 +20,7 @@ class Juros:
 		self._SELIC_Rates_Period = {}
 		self._CDI_Rate = 6.4/6.5
 		self._FixedRate = 1
+		self._IPCAonPeriod = 1
 
 	def getCDIRate(self):
 		# magic constant to compute the real CDI from the SELIC
@@ -110,7 +111,7 @@ class Juros:
 			sys.exit(-1)
 
 
-	# TODO: dicover how to get working days aside from SELIC
+	# TODO: discover how to get working days aside from SELIC
 	def fetchMonthlyIPCARates(self, inicio, fim):
 		# "http://api.sidra.ibge.gov.br/values/t/1419/n1/all/p/"&ANO(A2)&TEXTO(A2;"mm")&"/v/63"
 		start_date, end_date = self.checkPeriod(inicio, fim)	
@@ -135,6 +136,8 @@ class Juros:
 			for d in data_json[1:]:
 				data[datetime.strptime(d['D2C'],"%Y%m")]=float(d['V'])
 
+			self._IPCAonPeriod = round ( sum ( data.values() ) , 2 )
+
 			# freeing the pool of connections before returning
 			http_query.clear()
 
@@ -143,6 +146,10 @@ class Juros:
 		else:
 			sys.stderr.write("Erro obtendo IPCA mensal\n")
 			sys.exit(-1)
+
+	def getIPCAonPeriod(self, inicio, fim):
+		self.fetchMonthlyIPCARates(inicio, fim)
+		return self._IPCAonPeriod
 
 	# strategy method to implement various interest rates
 	def getInterestRates(self,inicio,fim):
@@ -190,13 +197,15 @@ class JurosFixos(Juros):
 		return self._FixedRate
 
 	def setYearlyFixedRate(self,rate):
-		self._FixedRate = rate/252	
+		self._FixedRate = rate
 
 	def getInterestRates(self,inicio,fim):
 		# getting SELIC just to grab valid dates 		
 		SELIC = self.fetchSELICRates(inicio,fim)
 
-		FixedRate = self.getFixedRate()
+		FixedRate = self.getFixedRate() / 252
+
+
 		rates = { key : (1+FixedRate/100) for key,value in SELIC.items() }
 		return rates
 
@@ -206,20 +215,40 @@ class JurosIPCA(Juros):
 	def __init__(self):
 		Juros.__init__(self)
 		self._FixedRate = 1
+		self._IPCAonPeriod = -1
 
 	def getFixedRate(self):
 		return self._FixedRate
 
 	def setFixedRate(self,rate):
-		self._FixedRate = rate/252	
+		self._FixedRate = rate
 
 	def getInterestRates(self,inicio,fim):
 		# getting SELIC just to grab valid dates 		
 		SELIC = self.fetchSELICRates(inicio,fim)
-		IPCA = self.fetchMonthlyIPCARates(inicio,fim)
+		
+		#IPCA = self.fetchMonthlyIPCARates(inicio,fim) 
 
-		FixedRate = self.getFixedRate()
-		rates = { dia : (1+FixedRate/100) for dia in SELIC.keys() if datetime.strptime(dia.strftime("%Y%m") in IPCA.keys() ) }
+		IPCAmensal = self.fetchMonthlyIPCARates(inicio, fim)
+
+		IPCAperiodo = self.getIPCAonPeriod(inicio, fim)
+
+		print(IPCAperiodo)
+
+		FixedRate = self.getFixedRate( ) / 252
+		
+		rates = { dia : (1+FixedRate/100) for dia in SELIC.keys() }
+
+		dias = [ k for k in rates.keys() ]
+
+		ultimo_dia = max(SELIC.keys())
+
+		print(ultimo_dia)
+
+		rates[ ultimo_dia ] *= ( 1 + ( IPCAperiodo / 100 ) )
+
+		#print( rates[ultimo_dia] )
+
 		return rates		
 	
 #start.strftime("%d/%m/%Y") :
@@ -236,10 +265,14 @@ class TestJurosClass(unittest.TestCase):
 
 		# print(SELIC)
 
-	def test_010_fetchIPCA(self):
+	def test_020_fetchIPCA(self):
 		IPCA = self.Juros.fetchMonthlyIPCARates('01/02/2019','01/07/2019')
 
 		print(IPCA)
+		#print(self.Juros.getIPCAonPeriod('01/02/2019','01/07/2019'))
+
+		self.assertEqual(self.Juros.getIPCAonPeriod('01/02/2019','01/07/2019'),2.08)
+		
 
 class TestJurosCDIClass(unittest.TestCase):
 
@@ -279,6 +312,30 @@ class TestJurosFixosClass(unittest.TestCase):
 	# check that s.split fails when the separator is not a string
 	# with self.assertRaises(TypeError):
 	#    s.split(2)
+
+class TestJurosIPCAClass(unittest.TestCase):
+
+	def setUp(self):
+		self.JurosIPCA = JurosIPCA()
+
+	def test_010_setFixedRate(self):
+
+		self.JurosIPCA.setFixedRate(252)
+
+		fixos = self.JurosIPCA.getFixedRate()
+
+		self.assertEqual(fixos,1)
+
+	def test_020_IPCAInterests(self):
+
+		self.JurosIPCA.setFixedRate(3)
+
+		JurosIPCAnoPeriodo = self.JurosIPCA.getInterestRates('01/07/2019','31/12/2019')
+		
+		print( sorted(JurosIPCAnoPeriodo.items())  )
+
+		# self.assertEqual(JurosIPCAnoPeriodo,1)
+
 
 if __name__ == '__main__':
     unittest.main()

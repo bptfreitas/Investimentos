@@ -9,7 +9,7 @@ import urllib3
 import datetime
 import json
 
-from class_ganhos import Investiment
+from class_investment import Investiment
 
 from urllib.parse import urlencode
 
